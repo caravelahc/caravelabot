@@ -1,5 +1,7 @@
 from functools import wraps
 from telegram.ext import Updater, CommandHandler
+from telegram.ext import MessageHandler, Filters
+from telegram import ReplyKeyboardMarkup, KeyboardButton
 from socket import socket
 import logging
 from . import config
@@ -34,11 +36,14 @@ def admin_only(func):
 
 
 def start(bot, update):
-    chat_id = update['message']['chat']['id']
+    button = KeyboardButton('Unlock!')
+    keyboard = ReplyKeyboardMarkup([[button]])
+
     text = ('Hello! Use /unlock to unlock the hacker space door.\n'
             'To promote a user, forward me a message from him and '
             'reply to it with /allow or /disallow')
-    bot.send_message(chat_id, text)
+
+    update.message.reply_text(text, reply_markup=keyboard)
 
 
 @admin_only
@@ -47,6 +52,11 @@ def unlock(bot, update):
     with socket() as s:
         s.connect(('10.0.0.100', 8000))
         s.send('unlock door'.encode())
+
+
+def text_handler(bot, update):
+    if update.message.text == 'Unlock!':
+        unlock(bot, update)
 
 
 @creator_only
@@ -99,6 +109,7 @@ def main():
     updater.dispatcher.add_error_handler(error_handler)
     updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(CommandHandler('unlock', unlock))
+    updater.dispatcher.add_handler(MessageHandler(Filters.text, text_handler))
     updater.dispatcher.add_handler(CommandHandler('allow', allow))
     updater.dispatcher.add_handler(CommandHandler('disallow', disallow))
     updater.start_polling()

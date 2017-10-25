@@ -1,8 +1,8 @@
 from functools import wraps
 from telegram.ext import Updater, CommandHandler
 from socket import socket
-import config
 import logging
+from . import config
 
 
 def creator_only(func):

@@ -3,7 +3,10 @@ from os import environ
 from pathlib import Path
 
 
-CONFIG_DIR = Path(environ['XDG_CONFIG_HOME'], 'door_bot')
+try:
+    CONFIG_DIR = Path(environ['XDG_CONFIG_HOME'], 'caravelabot')
+except KeyError:
+    CONFIG_DIR = Path(environ['HOME'], '.config', 'caravelabot')
 
 
 def load():

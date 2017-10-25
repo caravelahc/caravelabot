@@ -52,7 +52,7 @@ def unlock(bot, update):
 @creator_only
 def allow(bot, update):
     try:
-        user_id = update.message.reply_to_message.from_user.id
+        user_id = update.message.reply_to_message.forward_from.id
     except AttributeError:
         update.message.reply_text('You must forward a message to me and '
                                   'reply to it with this command!')
@@ -72,7 +72,7 @@ def allow(bot, update):
 @creator_only
 def disallow(bot, update):
     try:
-        user_id = update.message.reply_to_message.from_user.id
+        user_id = update.message.reply_to_message.forward_from.id
     except AttributeError:
         update.message.reply_text('You must forward a message to me and '
                                   'reply to it with this command!')

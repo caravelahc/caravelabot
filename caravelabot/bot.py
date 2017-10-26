@@ -50,8 +50,8 @@ def start(bot, update):
 def unlock(bot, update):
     with socket() as s:
         s.connect(('10.0.0.100', 8000))
-        message = 'unlock door'.encode()
-        s.send(message)
+        message = 'unlock door'
+        s.send(message.encode())
         response = s.recv(32).decode()
 
     if response == message:

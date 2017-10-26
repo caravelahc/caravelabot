@@ -48,10 +48,16 @@ def start(bot, update):
 
 @admin_only
 def unlock(bot, update):
-    update.message.reply_text('Unlocking door!')
     with socket() as s:
         s.connect(('10.0.0.100', 8000))
-        s.send('unlock door'.encode())
+        message = 'unlock door'.encode()
+        s.send(message)
+        response = s.recv(32).decode()
+
+    if response == message:
+        update.message.reply_text('Unlocking door!')
+    else:
+        update.message.reply_text('Something went wrong. Go ask @cauebs')
 
 
 def text_handler(bot, update):

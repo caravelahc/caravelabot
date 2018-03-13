@@ -10,4 +10,8 @@ name = "pypi"
 python-telegram-bot = "*"
 dataset = "*"
 
+
 [dev-packages]
+
+"flake8" = "*"
+"autopep8" = "*"

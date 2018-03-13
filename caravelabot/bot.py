@@ -1,10 +1,15 @@
+import logging
+
 from functools import wraps
+from socket import socket
+
+import dataset
+
 from telegram.ext import Updater, CommandHandler
 from telegram.ext import MessageHandler, Filters
 from telegram import ReplyKeyboardMarkup, KeyboardButton
-from socket import socket
-import logging
-from . import config
+
+from .config import TOKEN, DB_PATH
 
 
 def creator_only(func):
@@ -23,9 +28,10 @@ def creator_only(func):
 def admin_only(func):
     @wraps(func)
     def new_func(bot, update, *args, **kwargs):
-        user_id = update.message.from_user.id
-
-        if user_id not in config.load()['admins']:
+        db = dataset.connect(f'sqlite:///{DB_PATH}')
+        table = db.get_table('admins', primary_id='id')
+        user = table.find_one(id=update.message.from_user.id)
+        if not user:
             text = ('`Username is not in the sudoers file. '
                     'This incident will be reported`')
             update.message.reply_text(text, parse_mode='Markdown')
@@ -48,16 +54,22 @@ def start(bot, update):
 
 @admin_only
 def unlock(bot, update):
-    with socket() as s:
-        s.connect(('10.0.0.100', 8000))
-        message = 'unlock door'
-        s.send(message.encode())
-        response = s.recv(32).decode()
-
-    if response == message:
-        update.message.reply_text('Unlocking door!')
-    else:
+    try:
+        with socket() as s:
+            s.connect(('10.0.0.100', 8000))
+            message = 'unlock door'
+            s.send(message.encode())
+            response = s.recv(32).decode()
+        assert response == message
+    except Exception:
         update.message.reply_text('Something went wrong. Go ask @cauebs')
+    else:
+        db = dataset.connect(f'sqlite:///{DB_PATH}')
+        table = db.get_table('access_log', primary_id='datetime',
+                             primary_type=db.types.datetime)
+        user = update.message.from_user
+        table.insert(dict(id=user.id, datetime=update.message.date))
+        update.message.reply_text('Access granted.', disable_notification=True)
 
 
 def text_handler(bot, update):
@@ -65,44 +77,40 @@ def text_handler(bot, update):
         unlock(bot, update)
 
 
-@creator_only
-def allow(bot, update):
-    try:
-        user_id = update.message.reply_to_message.forward_from.id
-    except AttributeError:
+def change_permission(bot, update, operation):
+    user = update.message.reply_to_message.forward_from
+    if user is None:
         update.message.reply_text('You must forward a message to me and '
                                   'reply to it with this command!')
         return
 
-    c = config.load()
+    db = dataset.connect(f'sqlite:///{DB_PATH}')
+    table = db.get_table('admins', primary_id='id')
 
-    admins = set(c['admins'])
-    admins.add(user_id)
-    c['admins'] = list(admins)
+    if operation == 'allow':
+        full_name = f'{user.first_name} {user.last_name}'
+        data = dict(id=user.id, user_name=user.username, full_name=full_name)
+        table.upsert(data, ['id'])
+        response = 'Admin added'
 
-    config.save(c)
+    elif operation == 'disallow':
+        table.delete(id=user.id)
+        response = 'Admin removed'
 
-    update.message.reply_text('Admin added')
+    else:
+        raise ValueError('Invalid operation')
+
+    update.message.reply_text(response)
+
+
+@creator_only
+def allow(bot, update):
+    change_permission(bot, update, 'allow')
 
 
 @creator_only
 def disallow(bot, update):
-    try:
-        user_id = update.message.reply_to_message.forward_from.id
-    except AttributeError:
-        update.message.reply_text('You must forward a message to me and '
-                                  'reply to it with this command!')
-        return
-
-    c = config.load()
-
-    admins = set(c['admins'])
-    admins.remove(user_id)
-    c['admins'] = list(admins)
-
-    config.save(c)
-
-    update.message.reply_text('Admin removed')
+    change_permission(bot, update, 'disallow')
 
 
 def error_handler(bot, update, error):
@@ -111,7 +119,7 @@ def error_handler(bot, update, error):
 
 def main():
     logging.basicConfig()
-    updater = Updater(config.load()['token'])
+    updater = Updater(TOKEN)
     updater.dispatcher.add_error_handler(error_handler)
     updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(CommandHandler('unlock', unlock))

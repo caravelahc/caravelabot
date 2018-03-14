@@ -81,7 +81,7 @@ def change_permission(bot, update, operation):
     table = db.get_table('admins', primary_id='id')
 
     if operation == 'allow':
-        full_name = f'{user.first_name} {user.last_name}'
+        full_name = ' '.join(user.first_name or '', user.last_name or '')
         data = dict(id=user.id, user_name=user.username, full_name=full_name)
         table.upsert(data, ['id'])
         response = 'Admin added'
@@ -106,6 +106,20 @@ def disallow(bot, update):
     change_permission(bot, update, 'disallow')
 
 
+@creator_only
+def print_log(bot, update):
+    db = dataset.connect(f'sqlite:///{DB_PATH}')
+    table = db.get_table('access_log')
+    response = ''
+    for row in table.find(order_by='-datetime', _limit=10):
+        user = db.get_table('admins').find_one(id=row['id'])
+        response += f'*{row["datetime"].isoformat()}* {user["full_name"]}'
+        if user['user_name']:
+            response += f'(@{user["user_name"]})'
+        response += '\n\n'
+    update.message.reply_text(response, parse_mode='Markdown')
+
+
 def error_handler(bot, update, error):
     update.message.reply_text(error)
 
@@ -119,6 +133,7 @@ def main():
     updater.dispatcher.add_handler(MessageHandler(Filters.text, text_handler))
     updater.dispatcher.add_handler(CommandHandler('allow', allow))
     updater.dispatcher.add_handler(CommandHandler('disallow', disallow))
+    updater.dispatcher.add_handler(CommandHandler('log', print_log))
     updater.start_polling()
 
 

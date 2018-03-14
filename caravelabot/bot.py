@@ -81,7 +81,7 @@ def change_permission(bot, update, operation):
     table = db.get_table('admins', primary_id='id')
 
     if operation == 'allow':
-        full_name = ' '.join(user.first_name or '', user.last_name or '')
+        full_name = ' '.join([user.first_name or '', user.last_name or ''])
         data = dict(id=user.id, user_name=user.username, full_name=full_name)
         table.upsert(data, ['id'])
         response = 'Admin added'

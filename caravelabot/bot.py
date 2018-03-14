@@ -43,7 +43,8 @@ def start(bot, update):
     button = KeyboardButton('Unlock!')
     keyboard = ReplyKeyboardMarkup([[button]])
 
-    update.message.reply_text(GREETING, reply_markup=keyboard)
+    update.message.reply_text(GREETING, reply_markup=keyboard,
+                              parse_mode='Markdown')
 
 
 @admin_only
@@ -63,7 +64,8 @@ def unlock(bot, update):
                              primary_type=db.types.datetime)
         user = update.message.from_user
         table.insert(dict(id=user.id, datetime=update.message.date))
-        update.message.reply_text(ACCESS_GRANTED, disable_notification=True)
+        update.message.reply_text(ACCESS_GRANTED, parse_mode='Markdown',
+                                  disable_notification=True)
 
 
 def text_handler(bot, update):

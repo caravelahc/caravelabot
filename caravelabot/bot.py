@@ -109,11 +109,12 @@ def disallow(bot, update):
 
 
 @creator_only
-def print_log(bot, update):
+def print_log(bot, update, args):
     db = dataset.connect(f'sqlite:///{DB_PATH}')
     table = db.get_table('access_log')
     response = ''
-    for row in table.find(order_by='-datetime', _limit=10):
+    limit = int(args[0]) if args else 10
+    for row in table.find(order_by='-datetime', _limit=limit):
         user = db.get_table('admins').find_one(id=row['id'])
         response += f'*{row["datetime"].isoformat()}* {user["full_name"]}'
         if user['user_name']:
@@ -135,7 +136,8 @@ def main():
     updater.dispatcher.add_handler(MessageHandler(Filters.text, text_handler))
     updater.dispatcher.add_handler(CommandHandler('allow', allow))
     updater.dispatcher.add_handler(CommandHandler('disallow', disallow))
-    updater.dispatcher.add_handler(CommandHandler('log', print_log))
+    updater.dispatcher.add_handler(CommandHandler('log', print_log,
+                                                  pass_args=True))
     updater.start_polling()
 
 

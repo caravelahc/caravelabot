@@ -9,7 +9,7 @@ from telegram.ext import Updater, CommandHandler
 from telegram.ext import MessageHandler, Filters
 from telegram import ReplyKeyboardMarkup, KeyboardButton
 
-from .config import TOKEN, DB_PATH
+from .config import TOKEN, DB_PATH, CREATOR_ID
 from .strings import (ACCESS_DENIED, ACCESS_GRANTED,
                       MALFUNCTION, REQUIRE_FORWARD, GREETING)
 
@@ -17,7 +17,7 @@ from .strings import (ACCESS_DENIED, ACCESS_GRANTED,
 def creator_only(func):
     @wraps(func)
     def new_func(bot, update, *args, **kwargs):
-        if update.message.from_user.id == 61407387:
+        if update.message.from_user.id == CREATOR_ID:
             return func(bot, update, *args, **kwargs)
         else:
             update.message.reply_text(ACCESS_DENIED, parse_mode='Markdown')
@@ -124,20 +124,27 @@ def print_log(bot, update, args):
 
 
 def error_handler(bot, update, error):
-    update.message.reply_text(error)
+    bot.send_message(CREATOR_ID, str(error))
 
 
 def main():
     logging.basicConfig()
+
     updater = Updater(TOKEN)
-    updater.dispatcher.add_error_handler(error_handler)
-    updater.dispatcher.add_handler(CommandHandler('start', start))
-    updater.dispatcher.add_handler(CommandHandler('unlock', unlock))
-    updater.dispatcher.add_handler(MessageHandler(Filters.text, text_handler))
-    updater.dispatcher.add_handler(CommandHandler('allow', allow))
-    updater.dispatcher.add_handler(CommandHandler('disallow', disallow))
-    updater.dispatcher.add_handler(CommandHandler('log', print_log,
-                                                  pass_args=True))
+    dispatcher = updater.dispatcher
+
+    dispatcher.add_error_handler(error_handler)
+
+    dispatcher.add_handler(CommandHandler('start', start))
+
+    dispatcher.add_handler(CommandHandler('unlock', unlock))
+    dispatcher.add_handler(MessageHandler(Filters.text, text_handler))
+
+    dispatcher.add_handler(CommandHandler('allow', allow))
+    dispatcher.add_handler(CommandHandler('disallow', disallow))
+
+    dispatcher.add_handler(CommandHandler('log', print_log, pass_args=True))
+
     updater.start_polling()
 
 

@@ -51,6 +51,7 @@ def start(bot, update):
 def unlock(bot, update):
     try:
         with socket() as s:
+            s.settimeout(3)
             s.connect(('10.0.0.100', 8000))
             message = 'unlock door'
             s.send(message.encode())
